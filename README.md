@@ -335,6 +335,7 @@ The library is persistent by default (`STEMDECK_PERSIST_LIBRARY=1`), so tracks a
 | `STEMDECK_TIMEOUT_FFMPEG` | `300` | ffmpeg subprocess timeout (seconds). |
 | `STEMDECK_TIMEOUT_ANALYZE` | `120` | Audio analysis timeout (seconds). |
 | `STEMDECK_TIMEOUT_DEMUCS_STALL` | `1800` | Kill Demucs if no output for this many seconds. |
+| `PYTORCH_ENABLE_MPS_FALLBACK` | `1` for `mps` workers | Per-op CPU fallback on Apple Silicon. Set `0` to make an unsupported MPS op fail the GPU attempt loudly instead (diagnostic). |
 
 `run.sh` also reads: `HOST` (default `127.0.0.1`), `PORT` (default `8765`), `RELOAD=1` (enable uvicorn auto-reload for development), `FOREGROUND=1` (run in foreground instead of backgrounding).
 
@@ -367,6 +368,8 @@ The library is persistent by default (`STEMDECK_PERSIST_LIBRARY=1`), so tracks a
 **First separation is very slow:** Demucs downloads `htdemucs_6s` weights (~170 MB) on first run; cached afterwards.
 
 **Demucs runs on CPU only:** check the startup log for `device=mps` or `device=cuda`. If you see `cpu`, your torch install may be CPU-only.
+
+**`GPU failed — retrying on CPU` on Apple Silicon:** separation uses Metal (MPS) automatically, and StemDeck launches the separation worker with `PYTORCH_ENABLE_MPS_FALLBACK=1`, so an operation PyTorch's MPS backend doesn't implement runs on CPU by itself instead of failing the whole job onto CPU. Seeing the full CPU retry therefore means a genuine GPU fault (most often out of memory — try closing other GPU-heavy apps). To diagnose which op is unsupported, launch with `PYTORCH_ENABLE_MPS_FALLBACK=0` and read the job's failure detail.
 
 **Page reloaded mid-job:** the job keeps running server-side. Wait for it to finish, then resubmit.
 
